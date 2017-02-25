@@ -1,0 +1,92 @@
+# The loopback network interface
+auto lo
+iface lo inet loopback
+
+# Physical interface 1
+auto em1
+iface em1 inet manual
+    bond-master bond0
+    bond-primary em1
+
+# Physical interface 2
+auto p4p1
+iface p4p1 inet manual
+    bond-master bond1
+    bond-primary p4p1
+
+# Bond interface 0 (physical interfaces 1 and 3)
+auto bond0
+iface bond0 inet static
+    bond-slaves em1
+    bond-mode active-backup
+    bond-miimon 100
+    bond-downdelay 200
+    bond-updelay 200
+    address 192.168.88.100
+    netmask 255.255.255.0
+    gateway 192.168.88.1
+    dns-nameservers 192.168.88.1
+
+# Bond interface 1 (physical interfaces 2 and 4)
+auto bond1
+iface bond1 inet manual
+    bond-slaves p4p1
+    bond-mode active-backup
+    bond-miimon 100
+    bond-downdelay 250
+    bond-updelay 250
+
+# Container management VLAN interface
+iface bond0.10 inet manual
+    vlan-raw-device bond0
+
+# OpenStack Networking VXLAN (tunnel/overlay) VLAN interface
+iface bond1.20 inet manual
+    vlan-raw-device bond1
+
+# Storage network VLAN interface (optional)
+iface bond0.30 inet manual
+    vlan-raw-device bond0
+
+# Container management bridge
+auto br-mgmt
+iface br-mgmt inet static
+    bridge_stp off
+    bridge_waitport 0
+    bridge_fd 0
+    # Bridge port references tagged interface
+    bridge_ports bond0.10
+    address 172.29.236.51
+    netmask 255.255.252.0
+    dns-nameservers 8.8.8.8 8.8.4.4
+
+# OpenStack Networking VXLAN (tunnel/overlay) bridge
+auto br-vxlan
+iface br-vxlan inet static
+    bridge_stp off
+    bridge_waitport 0
+    bridge_fd 0
+    # Bridge port references tagged interface
+    bridge_ports bond1.20
+    address 172.29.240.51
+    netmask 255.255.252.0
+
+# OpenStack Networking VLAN bridge
+auto br-vlan
+iface br-vlan inet manual
+    bridge_stp off
+    bridge_waitport 0
+    bridge_fd 0
+    # Bridge port references untagged interface
+    bridge_ports bond1
+
+# Storage bridge (optional)
+auto br-storage
+iface br-storage inet static
+    bridge_stp off
+    bridge_waitport 0
+    bridge_fd 0
+    # Bridge port reference tagged interface
+    bridge_ports bond0.30
+    address 172.29.244.51
+    netmask 255.255.252.0
